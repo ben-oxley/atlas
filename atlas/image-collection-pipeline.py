@@ -78,7 +78,7 @@ def process():
 
     ax.set_axis_off()
     image.plot.imshow(ax=ax);
-
+    monthly = data.groupby("time.month").median().compute()
     images = [ms.true_color(*x) for x in monthly]
     images = xr.concat(images, dim="time")
 
