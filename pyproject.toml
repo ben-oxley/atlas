@@ -18,7 +18,12 @@ dask = "^2023.4.1"
 dask-gateway = "^2023.1.1"
 matplotlib = "^3.7.1"
 rioxarray = "^0.14.1"
+pygeotile = "^1.0.6"
+shapely = "^2.0.1"
 
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]

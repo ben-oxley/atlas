@@ -1,6 +1,7 @@
 # Based on https://planetarycomputer.microsoft.com/docs/tutorials/cloudless-mosaic-sentinel2/
 
 from multiprocessing import freeze_support
+from atlas.tiles import to_tiles
 import numpy as np
 import xarray as xr
 import rioxarray
@@ -70,7 +71,7 @@ def process():
     data = data.persist()
 
     median = data.median(dim="time").compute()
-
+    to_tiles(median,".","tile_{}-{}.tif")
     image = ms.true_color(*median)  # expects red, green, blue DataArrays
     import matplotlib.pyplot as plt
 
