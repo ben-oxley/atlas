@@ -163,3 +163,4 @@ backup**
 **image**.tif
 *.tif
 *.tif.aux.xml
+**.pt

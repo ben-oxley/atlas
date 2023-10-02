@@ -21,6 +21,7 @@ rioxarray = "^0.14.1"
 pygeotile = "^1.0.6"
 shapely = "^2.0.1"
 psycopg2 = "^2.9.8"
+ultralytics = "^8.0.191"
 
 
 [tool.poetry.group.dev.dependencies]
