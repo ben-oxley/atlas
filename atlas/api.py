@@ -18,8 +18,7 @@ async def root(latmin:float,latmax:float,lonmin:float,lonmax:float):
 
 @app.get("/analyse/{zoom}")
 async def root(zoom:int):
-    results = detectInPath(zoom)
-    return json.dumps(results)
+    detectInPath(zoom)
 
 def start():
     """Launched with `poetry run start` at root level"""

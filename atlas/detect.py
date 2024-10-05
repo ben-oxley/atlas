@@ -13,4 +13,4 @@ def detectInPath(zoom):
     # Other models to test: https://github.com/swricci/small-boat-detector
     # From https://github.com/robmarkcole/kaggle-ships-in-Google-Earth-with-YOLOv8/blob/main/models/yolov8m_best.pt
     model = YOLO(f'models\marine-vessel-detection-yolov8\yolov8s.pt')
-    return model.predict(source=test_imgs, conf=0.2, save=True)
+    model.predict(source=test_imgs, conf=0.2, save=True)
