@@ -5,6 +5,9 @@ description = ""
 authors = ["Ben Oxley <ben.oxley@gmail.com>"]
 readme = "README.md"
 
+[tool.poetry.scripts]
+start = "atlas.api:start"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 numpy = "^1.24.3"
@@ -22,6 +25,8 @@ pygeotile = "^1.0.6"
 shapely = "^2.0.1"
 psycopg2 = "^2.9.8"
 ultralytics = "^8.0.191"
+fastapi = "^0.115.0"
+uvicorn = "^0.31.0"
 
 
 [tool.poetry.group.dev.dependencies]

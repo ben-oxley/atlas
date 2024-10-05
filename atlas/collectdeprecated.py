@@ -26,23 +26,12 @@ from dask.distributed import Client
 # cluster.adapt(minimum=4, maximum=24)
 # print(cluster.dashboard_link)
 
-def process():
+def process(aoa):
 
     client = Client()
 
-    area_of_interest = {
-        "type": "Polygon",
-        "coordinates": [
-            [
-                [-122.27508544921875, 47.54687159892238],
-                [-121.96128845214844, 47.54687159892238],
-                [-121.96128845214844, 47.745787772920934],
-                [-122.27508544921875, 47.745787772920934],
-                [-122.27508544921875, 47.54687159892238],
-            ]
-        ],
-    }
-    bbox = rasterio.features.bounds(area_of_interest)
+
+    bbox = rasterio.features.bounds(aoa)
 
     stac = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1",

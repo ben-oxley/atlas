@@ -17,7 +17,7 @@ Search for images that intersect the lat-lon bounds provided
 '''
 def search_images(lat_min, lat_max, lon_min, lon_max):
     #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
-    zoom = 13
+    zoom = 11
     api_url = "https://earth-search.aws.element84.com/v1"
     client = Client.open(api_url)
     collection = (
@@ -137,7 +137,7 @@ def tile_image(image_name, zoom):
                     parents=True, exist_ok=True
                 )
                 
-                file_dest_cropped = f"{str(zoom)}/{str(x)}/{str(y)}/visual.tif"
+                file_dest_cropped = f"{str(zoom)}/{str(x)}/{str(y)}/{str(x)}-{str(y)}-visual.tif"
                 
                 out_image, out_transform = rasterio.mask.mask(
                     src, [polygon_3857], crop=True
@@ -157,4 +157,3 @@ def tile_image(image_name, zoom):
                 with rasterio.open(file_dest_cropped, "w", **out_meta) as dest:
                     dest.write(out_image)
 
-search_images(50.73645513701064, 50.76425935711649, -1.0986328125000033, -1.0546875000000047)
