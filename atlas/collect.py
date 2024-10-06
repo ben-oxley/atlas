@@ -7,9 +7,13 @@ import rasterio.plot
 import rasterio.mask
 import os
 import urllib
+
 from pygeotile.tile import Tile
 from pygeotile.point import Point as pyPoint
 from shapely.geometry import Point, Polygon
+
+from atlas.models.tile import Tile as TileData
+from atlas.db import AtlasDBFacade
 
 
 '''
@@ -49,7 +53,14 @@ def search_images(lat_min, lat_max, lon_min, lon_max):
 
     reprojected = download_and_reproject(item.id, item.assets["visual"].href)
 
-    tile_image(reprojected, zoom)
+    tiles_created = tile_image(reprojected, zoom)
+
+    dbcontext = AtlasDBFacade()
+
+    dbcontext.connect()
+
+    for tile in tiles_created:
+        dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
 
 
 def download_and_reproject(image_name, image_url):
@@ -92,6 +103,8 @@ def download_and_reproject(image_name, image_url):
 
 
 def tile_image(image_name, zoom):
+
+    tiles_created = []
 
     with rasterio.open(image_name) as src:
 
@@ -156,4 +169,9 @@ def tile_image(image_name, zoom):
 
                 with rasterio.open(file_dest_cropped, "w", **out_meta) as dest:
                     dest.write(out_image)
+
+                tiles_created.append(TileData(x,y,zoom))
+
+    return tiles_created
+                
 

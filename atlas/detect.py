@@ -2,9 +2,6 @@ from PIL import Image
 from ultralytics import YOLO
 from pathlib import Path
 
-import ultralytics
-ultralytics.checks()
-
 def detectInPath(zoom):
     test_imgs = Path(str(zoom)).glob('**/*.tif')
     test_imgs = [str(x) for x in test_imgs]

@@ -12,3 +12,35 @@ Maxar open data https://registry.opendata.aws/maxar-open-data/
 ## Running postgres
 
 docker run -p 5432:5432 --name some-postgis -e POSTGRES_PASSWORD=mysecretpassword -d postgis/postgis
+
+
+## Data Schema
+
+### Metrics
+
+
+### Tile
+- id (pk)
+- zoom 
+- x
+- y
+- datetime
+- source
+- source url
+
+### Tile Metrics
+- id (pk)
+- tile (fk)
+- metric (Boats, trees, houses)
+- model
+- value
+- confidence
+- unit (e.g. count, percentage )
+
+### Models
+- id (pk)
+- type 
+- model identifier
+- 
+
+### Units

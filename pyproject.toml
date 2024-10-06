@@ -27,6 +27,7 @@ psycopg2 = "^2.9.8"
 ultralytics = "^8.0.191"
 fastapi = "^0.115.0"
 uvicorn = "^0.31.0"
+pydantic-settings = "^2.5.2"
 
 
 [tool.poetry.group.dev.dependencies]
