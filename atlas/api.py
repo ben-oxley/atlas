@@ -13,12 +13,12 @@ async def root():
 
 #localhost:8000/collect/50.73645513701064/50.76425935711649/-1.0986328125000033/-1.0546875000000047
 @app.get("/collect/{latmin}/{latmax}/{lonmin}/{lonmax}")
-async def root(latmin:float,latmax:float,lonmin:float,lonmax:float):
+async def collect(latmin:float,latmax:float,lonmin:float,lonmax:float):
     search_images(latmin,latmax,lonmin,lonmax)
 
-@app.get("/analyse/{zoom}")
-async def root(zoom:int):
-    detectInPath(zoom)
+@app.get("/analyse/{source_id}")
+async def analyse(source_id:int):
+    detectInPath(source_id)
 
 def start():
     """Launched with `poetry run start` at root level"""

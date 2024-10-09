@@ -25,8 +25,7 @@ docker run -p 5432:5432 --name some-postgis -e POSTGRES_PASSWORD=mysecretpasswor
 - x
 - y
 - datetime
-- source
-- source url
+- source id (fk)
 
 ### Tile Metrics
 - id (pk)
@@ -42,5 +41,11 @@ docker run -p 5432:5432 --name some-postgis -e POSTGRES_PASSWORD=mysecretpasswor
 - type 
 - model identifier
 - 
+
+### source
+- id (pk)
+- source
+- source url
+- datetime
 
 ### Units

@@ -7,6 +7,7 @@ import rasterio.plot
 import rasterio.mask
 import os
 import urllib
+import uuid
 
 from pygeotile.tile import Tile
 from pygeotile.point import Point as pyPoint
@@ -53,14 +54,18 @@ def search_images(lat_min, lat_max, lon_min, lon_max):
 
     reprojected = download_and_reproject(item.id, item.assets["visual"].href)
 
-    tiles_created = tile_image(reprojected, zoom)
-
     dbcontext = AtlasDBFacade()
 
     dbcontext.connect()
 
+    source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
+
+    tiles_created = tile_image(reprojected, zoom, source_id)
+
     for tile in tiles_created:
-        dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
+        dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
+
+    
 
 
 def download_and_reproject(image_name, image_url):
@@ -102,7 +107,7 @@ def download_and_reproject(image_name, image_url):
     return file_dest
 
 
-def tile_image(image_name, zoom):
+def tile_image(image_name, zoom, source_id):
 
     tiles_created = []
 
@@ -146,11 +151,11 @@ def tile_image(image_name, zoom):
                 )
 
                 # Make directory structure
-                Path(f"{str(zoom)}/{str(x)}/{str(y)}").mkdir(
+                Path(f"tiles/{str(zoom)}/{str(x)}/{str(y)}").mkdir(
                     parents=True, exist_ok=True
                 )
                 
-                file_dest_cropped = f"{str(zoom)}/{str(x)}/{str(y)}/{str(x)}-{str(y)}-visual.tif"
+                file_dest_cropped = f"tiles/{str(zoom)}/{str(x)}/{str(y)}/{source_id}-visual.tif"
                 
                 out_image, out_transform = rasterio.mask.mask(
                     src, [polygon_3857], crop=True
