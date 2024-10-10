@@ -40,7 +40,7 @@ def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
     search = client.search(
         collections=[collection],
         intersects=polygon,
-        max_items=100,
+        max_items=1000,
         sortby=[
             {"direction": "desc", "field": "properties.datetime"},
             {"direction": "asc", "field": "id"},

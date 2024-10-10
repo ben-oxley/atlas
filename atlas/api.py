@@ -11,7 +11,7 @@ app = FastAPI()
 async def root():
     return {"message": "Hello World"}
 
-#localhost:8000/collect/50.73645513701064/50.76425935711649/-1.0986328125000033/-1.0546875000000047
+#http://localhost:8000/collect/50.7/50.9/-1.28/-1.27?number_to_process=10
 @app.get("/collect/{latmin}/{latmax}/{lonmin}/{lonmax}")
 async def collect(latmin:float,latmax:float,lonmin:float,lonmax:float,number_to_process: int = 1):
     search_images(latmin,latmax,lonmin,lonmax,number_to_process)
