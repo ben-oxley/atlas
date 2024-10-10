@@ -12,7 +12,7 @@ def detectInPath(source_id):
     # Other models to test: https://github.com/swricci/small-boat-detector
     # From https://github.com/robmarkcole/kaggle-ships-in-Google-Earth-with-YOLOv8/blob/main/models/yolov8m_best.pt
     model = YOLO(f'models\marine-vessel-detection-yolov8\yolov8s.pt')
-    results = model.predict(source=test_imgs, conf=0.2, save=True)
+    results = model.predict(source=test_imgs, conf=0.2, save=False)
     
 
     dbcontext = AtlasDBFacade()
@@ -23,7 +23,7 @@ def detectInPath(source_id):
         avg_confidence = result.boxes.conf.mean()
         detections = len(result.boxes)
         path_arr = result.path.split('\\')
-        zoom, x, y = path_arr[1], path_arr[2], path_arr[3]
+        zoom, x, y = path_arr[-4:-1]
 
         tile_id = dbcontext.get_tile_id(x,y,zoom,source_id)
 

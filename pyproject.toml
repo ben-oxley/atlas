@@ -8,6 +8,11 @@ readme = "README.md"
 [tool.poetry.scripts]
 start = "atlas.api:start"
 
+[[tool.poetry.source]]
+name = "torchcu124"
+url = "https://download.pytorch.org/whl/cu124"
+priority = "supplemental"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 numpy = "^1.24.3"
@@ -28,6 +33,8 @@ ultralytics = "^8.0.191"
 fastapi = "^0.115.0"
 uvicorn = "^0.31.0"
 pydantic-settings = "^2.5.2"
+torch = "2.4.1+cu124"
+torchvision = "0.19.1+cu124"
 
 
 [tool.poetry.group.dev.dependencies]
