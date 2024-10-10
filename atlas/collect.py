@@ -20,7 +20,7 @@ from atlas.db import AtlasDBFacade
 '''
 Search for images that intersect the lat-lon bounds provided
 '''
-def search_images(lat_min, lat_max, lon_min, lon_max):
+def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
     #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
     zoom = 11
     api_url = "https://earth-search.aws.element84.com/v1"
@@ -47,23 +47,27 @@ def search_images(lat_min, lat_max, lon_min, lon_max):
         ],
     )
 
+    number_processed = 0 
     # Just use the most recent item
-    item = [item for item in search.items() if item.properties["eo:cloud_cover"] < 20][
-        0
-    ]
+    for item in [item for item in search.items() if item.properties["eo:cloud_cover"] < 20]:
 
-    reprojected = download_and_reproject(item.id, item.assets["visual"].href)
+        reprojected = download_and_reproject(item.id, item.assets["visual"].href)
 
-    dbcontext = AtlasDBFacade()
+        dbcontext = AtlasDBFacade()
 
-    dbcontext.connect()
+        dbcontext.connect()
 
-    source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
+        source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
 
-    tiles_created = tile_image(reprojected, zoom, source_id)
+        tiles_created = tile_image(reprojected, zoom, source_id)
 
-    for tile in tiles_created:
-        dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
+        for tile in tiles_created:
+            dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
+
+        number_processed = number_processed + 1
+
+        if number_processed >= number_to_process: return
+        
 
     
 
