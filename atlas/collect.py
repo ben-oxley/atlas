@@ -13,6 +13,7 @@ from pygeotile.tile import Tile
 from pygeotile.point import Point as pyPoint
 from shapely.geometry import Point, Polygon
 
+from atlas.jobs import JobTypes
 from atlas.models.tile import Tile as TileData
 from atlas.db import AtlasDBFacade
 
@@ -63,6 +64,7 @@ def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
 
         for tile in tiles_created:
             dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
+            dbcontext.add_job(JobTypes.DETECT,{"test":1})
 
         number_processed = number_processed + 1
 
