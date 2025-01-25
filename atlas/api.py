@@ -2,7 +2,7 @@ import json
 import uvicorn
 from fastapi import FastAPI
 from atlas.collect import search_images
-from atlas.detect import detectInPath
+from atlas.detect import detectInPath, get_change_over_time
 
 app = FastAPI()
 
@@ -19,6 +19,14 @@ async def collect(latmin:float,latmax:float,lonmin:float,lonmax:float,number_to_
 @app.get("/analyse/{source_id}")
 async def analyse(source_id:int):
     detectInPath(source_id)
+
+@app.get("/metrics/{tile_x}/{tile_y}/{tile_z}/{metric}")
+async def analyse(tile_x:int,tile_y:int,tile_z:int,metric:str):
+    result = get_change_over_time(tile_x,tile_y,tile_z,metric)
+    return result
+
+
+
 
 def start():
     """Launched with `poetry run start` at root level"""

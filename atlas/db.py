@@ -1,3 +1,4 @@
+import json
 import psycopg2
 from psycopg2 import Error
 
@@ -52,82 +53,77 @@ class AtlasDBFacade:
             cur.execute("CREATE TABLE IF NOT EXISTS sources(id SERIAL PRIMARY KEY, source VARCHAR(256), baseimageurl VARCHAR(1024), time TIMESTAMP);")
             cur.execute("CREATE TABLE IF NOT EXISTS tiles(id SERIAL PRIMARY KEY, sourceid SERIAL, tilex INT, tiley INT, tilez INT, time TIMESTAMP, CONSTRAINT fk_source FOREIGN KEY(sourceid) REFERENCES sources(id));")
             cur.execute("CREATE TABLE IF NOT EXISTS metrics(id SERIAL PRIMARY KEY, tileid SERIAL, tilex INT, tiley INT, tilez INT, time TIMESTAMP, metric VARCHAR(64), value FLOAT, CONSTRAINT fk_tile FOREIGN KEY(tileid) REFERENCES tiles(id));")
+            cur.execute("CREATE TABLE IF NOT EXISTS jobs(id SERIAL PRIMARY KEY, jobtype VARCHAR(64), jobparams JSON, status );")
             #cur.execute("CREATE TABLE IF NOT EXISTS detections(id SERIAL PRIMARY KEY, tilex INT, tiley INT, tilez INT, time TIMESTAMP, name VARCHAR(64), location geography(POINT,4326));")
             cur.close()
             conn.commit()
         except (Exception, Error) as error:
             print("Error while connecting to PostgreSQL", error)
 
-    def detction_insert(self):
-        try:
-            # Connect to an existing database
-            conn = self._get_connection()
-            cur = conn.cursor()
-            cur.execute("INSERT INTO detections (tilex, tiley, tilez, time, name, location) VALUES (1,1,1,NOW(),'boat','POINT(-22.6056 63.9850)');")            
-            cur.close()
-            conn.commit()
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
+    def detection_insert(self):
+        return self._db_execute("INSERT INTO detections (tilex, tiley, tilez, time, name, location) VALUES (1,1,1,NOW(),'boat','POINT(-22.6056 63.9850)');",())            
 
     def metric_insert(self,tileid,x,y,z,time,metric,value):
-        try:
-            # Connect to an existing database
-            conn = self._get_connection()
-            cur = conn.cursor()
-            cur.execute(f"INSERT INTO metrics (tileid, tilex, tiley, tilez, time, metric, value) VALUES (%s,%s,%s,%s,%s,%s,%s);",(tileid,x,y,z,time,metric,value))
-            cur.close()
-            conn.commit()
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
+        return self._db_execute(f"INSERT INTO metrics (tileid, tilex, tiley, tilez, time, metric, value) VALUES (%s,%s,%s,%s,%s,%s,%s);",(tileid,x,y,z,time,metric,value))
+
+    def get_metric(self,tile_x:int,tile_y:int,tile_z:int,metric:str):
+        return self._db_fetchall(f"SELECT time,value FROM metrics WHERE tilex=%s AND tiley=%s AND tilez=%s AND metric=%s;",(str(tile_x),str(tile_y),str(tile_z),metric))
 
     def get_tile_id(self,x,y,z,sourceid):
-        try:
-            # Connect to an existing database
-            conn = self._get_connection()
-            cur = conn.cursor()
-            cur.execute(f"SELECT id FROM tiles WHERE tilex=%s AND tiley=%s AND tilez=%s AND sourceid=%s;",(str(x),str(y),str(z),sourceid))
-            id_of_row = cur.fetchone()[0]
-            cur.close()
-            conn.commit()
-            return id_of_row
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
+        return self._db_fetchone(f"SELECT id FROM tiles WHERE tilex=%s AND tiley=%s AND tilez=%s AND sourceid=%s;",(str(x),str(y),str(z),sourceid))
 
     def get_tile_time(self,id):
-        try:
-            # Connect to an existing database
-            conn = self._get_connection()
-            cur = conn.cursor()
-            cur.execute(f"SELECT time FROM tiles WHERE id={id}")
-            time = cur.fetchone()[0]
-            cur.close()
-            conn.commit()
-            return time
-        except (Exception, Error) as error:
-            print("Error while connecting to PostgreSQL", error)
+        return self._db_fetchone(f"SELECT time FROM tiles WHERE id={id}")
         
     def tile_insert(self,x,y,z,time,sourceid):
+        return self._db_fetchone(f"INSERT INTO tiles (tilex, tiley, tilez, time, sourceid) VALUES (%s,%s,%s,%s,%s) RETURNING id;",(str(x),str(y),str(z),time,sourceid))
+
+    def source_insert(self,time,source,url):
+        return self._db_fetchone(f"INSERT INTO sources (source, baseimageurl, time) VALUES (%s,%s,%s) RETURNING id;",(source,url,time))
+
+    def add_job(self,job_type,job_params):
+        params_str = json.dumps(job_params)
+        return self._db_fetchone(f"INSERT INTO jobs (jobtype, jobparams) VALUES (%s,%s) RETURNING id;",(str(job_type),params_str))
+
+
+    def _db_execute(self,query,params):
         try:
             # Connect to an existing database
             conn = self._get_connection()
             cur = conn.cursor()
-            cur.execute(f"INSERT INTO tiles (tilex, tiley, tilez, time, sourceid) VALUES (%s,%s,%s,%s,%s) RETURNING id;",(str(x),str(y),str(z),time,sourceid))
-            id_of_new_row = cur.fetchone()[0]
+            cur.execute(query,params)
             cur.close()
             conn.commit()
-            return id_of_new_row
         except (Exception, Error) as error:
             print("Error while connecting to PostgreSQL", error)
 
-    def source_insert(self,time,source,url):
+    def _db_fetchone(self,query,params):
         try:
             # Connect to an existing database
             conn = self._get_connection()
             cur = conn.cursor()
-            cur.execute(f"INSERT INTO sources (source, baseimageurl, time) VALUES (%s,%s,%s) RETURNING id;",(source,url,time))
-            id_of_new_row = cur.fetchone()[0]
+            cur.execute(query,params)
+            result = cur.fetchone()[0]
             cur.close()
             conn.commit()
-            return id_of_new_row
+            return result
         except (Exception, Error) as error:
             print("Error while connecting to PostgreSQL", error)
+            return None
+    
+    def _db_fetchall(self,query,params):
+        try:
+            # Connect to an existing database
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute(query,params)
+            result = cur.fetchall()
+            cur.close()
+            conn.commit()
+            return result
+        except (Exception, Error) as error:
+            print("Error while connecting to PostgreSQL", error)
+            return None
+
+
+    
