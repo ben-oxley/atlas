@@ -12,4 +12,3 @@ class JobStatus(Enum):
     COMPLETE = 3
     ERROR = 4
     TIMEOUT = 5
-

@@ -14,78 +14,13 @@ from pygeotile.tile import Tile
 from pygeotile.point import Point as pyPoint
 from shapely.geometry import Point, Polygon
 
-from atlas.jobs import JobStatus, JobType
+from atlas.models.jobs import JobStatus, JobType
 from atlas.models.tile import Tile as TileData
 from atlas.db import AtlasDBFacade
 
 SENTINEL_ZOOM_TILE_LEVEL = 11
 
-'''
-Search for images that intersect the lat-lon bounds provided
-'''
-def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
-    #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
-    zoom = SENTINEL_ZOOM_TILE_LEVEL
-    api_url = "https://earth-search.aws.element84.com/v1"
-    client = Client.open(api_url)
-    collection = (
-        "sentinel-2-l2a"  # Sentinel-2, Level 2A, Cloud Optimized GeoTiffs (COGs)
-    )
-    polygon = Polygon(
-        [
-            Point(lon_min, lat_min),
-            Point(lon_max, lat_min),
-            Point(lon_max, lat_max),
-            Point(lon_min, lat_max),
-        ]
-    )
-
-    search = client.search(
-        collections=[collection],
-        intersects=polygon,
-        max_items=1000,
-        sortby=[
-            {"direction": "desc", "field": "properties.datetime"},
-            {"direction": "asc", "field": "id"},
-        ],
-    )
-
-    number_processed = 0 
-    for item in [item for item in search.items() if item.properties["eo:cloud_cover"] < 20]:
-
-        reprojected = download_and_reproject(item.id, item.assets["visual"].href)
-
-        dbcontext = AtlasDBFacade()
-
-        dbcontext.connect()
-
-        source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
-
-        tiles_created = tile_image(reprojected, zoom, source_id)
-
-        for tile in tiles_created:
-            tile_id = dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
-            dbcontext.add_job(JobType.DETECT,{"tile_id":tile_id})
-
-        number_processed = number_processed + 1
-
-        if number_processed >= number_to_process: return
-
-def check_jobs():
-    dbcontext = AtlasDBFacade()
-
-    dbcontext.connect()
-
-    job = dbcontext.peek_job(JobType.TILE)
-
-    if not job is None:
-        dbcontext.update_job(job[0],JobType.TILE,JobStatus.RUNNING,JobStatus.NOT_STARTED)
-        job_details = dbcontext.get_job(job[0])
-        jobparams = job_details[2]
-        tile_image_and_store(jobparams["id"],jobparams["source_db_id"],jobparams["href"],SENTINEL_ZOOM_TILE_LEVEL,jobparams["props"]["datetime"])
-        dbcontext.update_job(job[0],JobType.TILE,JobStatus.COMPLETE,JobStatus.RUNNING)
-
-def tile_image_and_store(source_id,db_id,url,zoom,datetime):
+def tile_image_and_store(source_id,source_db_id,url,zoom,datetime):
     
     reprojected = download_and_reproject(source_id, url)
 
@@ -93,11 +28,11 @@ def tile_image_and_store(source_id,db_id,url,zoom,datetime):
 
     dbcontext.connect()
 
-    tiles_created = tile_image(reprojected, zoom, db_id)
+    tiles_created = tile_image(reprojected, zoom, source_db_id)
 
     for tile in tiles_created:
-        dbcontext.tile_insert(tile.x,tile.y,tile.z,datetime,db_id)
-        dbcontext.add_job(JobType.DETECT,{"test":1})
+        tile_id = dbcontext.tile_insert(tile.x,tile.y,tile.z,datetime,source_db_id)
+        dbcontext.add_job(JobType.DETECT,{"tile_id":tile_id})
 
 
 '''
@@ -140,8 +75,6 @@ def queue_images_in_area(lat_min, lat_max, lon_min, lon_max):
 
         dbcontext.add_job(JobType.TILE,{"id":item.id,"source_db_id":source_id,"href":item.assets["visual"].href,"props":item.properties})
         
-
-    
 
 
 def download_and_reproject(image_name, image_url):

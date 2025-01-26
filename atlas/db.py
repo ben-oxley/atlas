@@ -3,7 +3,7 @@ from typing import Any
 import psycopg2
 from psycopg2 import Error
 
-from atlas.jobs import JobStatus
+from atlas.models.jobs import JobStatus
 from atlas.settings import Settings
 
 class AtlasDBFacade:
@@ -12,8 +12,6 @@ class AtlasDBFacade:
         # Connect to an existing database
         self.connection = self._get_connection()
         try:
-            
-
             # Create a cursor to perform database operations
             cursor = self.connection.cursor()
             # Print PostgreSQL details
@@ -87,8 +85,11 @@ class AtlasDBFacade:
         params_str = json.dumps(job_params)
         return self._db_fetchone(f"INSERT INTO jobs (jobtype, jobparams, status) VALUES (%s,%s,%s) RETURNING id;",(str(job_type),params_str,str(JobStatus.NOT_STARTED)))
     
-    def peek_job(self,job_type) -> tuple[Any, ...]:
+    def peek_job_of_type(self,job_type) -> tuple[Any, ...]:
         return self._db_fetchrow(f"SELECT * FROM jobs WHERE jobtype=%s AND status=%s",(str(job_type),str(JobStatus.NOT_STARTED)))
+
+    def peek_job(self) -> tuple[Any, ...]:
+        return self._db_fetchrow(f"SELECT * FROM jobs WHERE status=%s",(str(JobStatus.NOT_STARTED)))
     
     def get_job(self,job_id) -> tuple[Any, ...]:
         return self._db_fetchrow(f"SELECT * FROM jobs WHERE id=%(int)s",{"int":job_id})
@@ -98,10 +99,6 @@ class AtlasDBFacade:
 
     def pop_job(self,job_id)->None:
         return self._db_execute(f"DELETE FROM jobs WHERE id=%s",(str(job_id)))
-
-    
-
-
 
     def _db_execute(self,query,params):
         try:

@@ -1,8 +1,9 @@
 import json
 import uvicorn
 from fastapi import FastAPI
-from atlas.collect import check_jobs, queue_images_in_area, search_images
+from atlas.collect import queue_images_in_area, search_images
 from atlas.detect import detectInPath, get_change_over_time
+from atlas.jobengine import check_jobs
 
 app = FastAPI()
 
@@ -11,18 +12,24 @@ app = FastAPI()
 async def health():
     return {"status": "running"}
 
-@app.get("/tile/queue/{latmin}/{latmax}/{lonmin}/{lonmax}")
+'''
+This method queues images within a search bounding box that are available in the 
+sentinel database. At the moment it only queues images that have minimal cloud cover (<20%)
+'''
+#http://localhost:8000/tile/queue/50.7/50.9/-1.28/-1.27
+@app.get("/images/queue/{latmin}/{latmax}/{lonmin}/{lonmax}")
 async def tile_queue(latmin:float,latmax:float,lonmin:float,lonmax:float):
     queue_images_in_area(latmin,latmax,lonmin,lonmax)
 
+'''
+This method checks for jobs to process. It isn't intended as the main route processing. 
+Separate containers should be run, running the job engine to continually pick up and process jobs.
+'''
 @app.get("/jobs/check")
 async def check():
     check_jobs()
 
-#http://localhost:8000/collect/50.7/50.9/-1.28/-1.27?number_to_process=10
-@app.get("/collect/{latmin}/{latmax}/{lonmin}/{lonmax}")
-async def collect(latmin:float,latmax:float,lonmin:float,lonmax:float,number_to_process: int = 1):
-    search_images(latmin,latmax,lonmin,lonmax,number_to_process)
+
 
 @app.get("/analyse/{source_id}")
 async def analyse(source_id:int):

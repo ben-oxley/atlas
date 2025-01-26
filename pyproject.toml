@@ -7,6 +7,7 @@ readme = "README.md"
 
 [tool.poetry.scripts]
 start = "atlas.api:start"
+job-engine = "atlas.jobengine:run"
 
 [[tool.poetry.source]]
 name = "torchcu124"

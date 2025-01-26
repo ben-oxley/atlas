@@ -4,6 +4,12 @@ from pathlib import Path
 
 from atlas.db import AtlasDBFacade
 
+
+'''
+This detection routine uses the file store search to filed files to process. This relies on the files
+already being on the machine in the right path. However this is important for fast processing and therefore
+should be used once tiles have been cached to the machines local storage or if they already exist in the path.
+'''
 def detectInPath(source_id):
     test_imgs = Path("tiles").glob(f'**/{source_id}-visual.tif')
     test_imgs = [str(x) for x in test_imgs]
