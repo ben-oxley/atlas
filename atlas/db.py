@@ -1,4 +1,5 @@
 import json
+from typing import Any
 import psycopg2
 from psycopg2 import Error
 
@@ -76,26 +77,26 @@ class AtlasDBFacade:
     def get_tile_time(self,id):
         return self._db_fetchone(f"SELECT time FROM tiles WHERE id={id}")
         
-    def tile_insert(self,x,y,z,time,sourceid):
+    def tile_insert(self,x,y,z,time,sourceid) -> int:
         return self._db_fetchone(f"INSERT INTO tiles (tilex, tiley, tilez, time, sourceid) VALUES (%s,%s,%s,%s,%s) RETURNING id;",(str(x),str(y),str(z),time,sourceid))
 
-    def source_insert(self,time,source,url):
+    def source_insert(self,time,source,url) -> int:
         return self._db_fetchone(f"INSERT INTO sources (source, baseimageurl, time) VALUES (%s,%s,%s) RETURNING id;",(source,url,time))
 
-    def add_job(self,job_type,job_params):
+    def add_job(self,job_type,job_params) -> int:
         params_str = json.dumps(job_params)
         return self._db_fetchone(f"INSERT INTO jobs (jobtype, jobparams, status) VALUES (%s,%s,%s) RETURNING id;",(str(job_type),params_str,str(JobStatus.NOT_STARTED)))
     
-    def peek_job(self,job_type):
-        return self._db_fetchone(f"SELECT * FROM jobs WHERE jobtype=%s AND status=%s",(str(job_type),str(JobStatus.NOT_STARTED)))
+    def peek_job(self,job_type) -> tuple[Any, ...]:
+        return self._db_fetchrow(f"SELECT * FROM jobs WHERE jobtype=%s AND status=%s",(str(job_type),str(JobStatus.NOT_STARTED)))
     
-    def get_job(self,job_id):
-        return self._db_fetchone(f"SELECT * FROM jobs WHERE id=%s",(str(job_id)))
+    def get_job(self,job_id) -> tuple[Any, ...]:
+        return self._db_fetchrow(f"SELECT * FROM jobs WHERE id=%(int)s",{"int":job_id})
 
-    def update_job(self,job_id,job_type,job_status,previous_job_status):
-        return self._db_fetchone(f"UPDATE jobs SET status=%s WHERE id=%s AND jobtype=%s AND status=%s",(str(job_status),str(job_id),str(job_type),str(previous_job_status)))
+    def update_job(self,job_id,job_type,job_status,previous_job_status)->None:
+        return self._db_execute(f"UPDATE jobs SET status=%s WHERE id=%s AND jobtype=%s AND status=%s",(str(job_status),str(job_id),str(job_type),str(previous_job_status)))
 
-    def pop_job(self,job_id):
+    def pop_job(self,job_id)->None:
         return self._db_execute(f"DELETE FROM jobs WHERE id=%s",(str(job_id)))
 
     
@@ -112,6 +113,20 @@ class AtlasDBFacade:
             conn.commit()
         except (Exception, Error) as error:
             print("Error while connecting to PostgreSQL", error)
+
+    def _db_fetchrow(self,query,params):
+        try:
+            # Connect to an existing database
+            conn = self._get_connection()
+            cur = conn.cursor()
+            cur.execute(query,params)
+            result = cur.fetchone()
+            cur.close()
+            conn.commit()
+            return result
+        except (Exception, Error) as error:
+            print("Error while connecting to PostgreSQL", error)
+            return None
 
     def _db_fetchone(self,query,params):
         try:

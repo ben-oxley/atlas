@@ -18,13 +18,14 @@ from atlas.jobs import JobStatus, JobType
 from atlas.models.tile import Tile as TileData
 from atlas.db import AtlasDBFacade
 
+SENTINEL_ZOOM_TILE_LEVEL = 11
 
 '''
 Search for images that intersect the lat-lon bounds provided
 '''
 def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
     #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
-    zoom = 11
+    zoom = SENTINEL_ZOOM_TILE_LEVEL
     api_url = "https://earth-search.aws.element84.com/v1"
     client = Client.open(api_url)
     collection = (
@@ -78,11 +79,13 @@ def check_jobs():
     job = dbcontext.peek_job(JobType.TILE)
 
     if not job is None:
-        dbcontext.update_job(job,JobType.TILE,JobStatus.RUNNING,JobStatus.NOT_STARTED)
-        job_details = dbcontext.get_job(job)
-        tile_image()
+        dbcontext.update_job(job[0],JobType.TILE,JobStatus.RUNNING,JobStatus.NOT_STARTED)
+        job_details = dbcontext.get_job(job[0])
+        jobparams = job_details[2]
+        tile_image_and_store(jobparams["id"],jobparams["source_db_id"],jobparams["href"],SENTINEL_ZOOM_TILE_LEVEL,jobparams["props"]["datetime"])
+        dbcontext.update_job(job[0],JobType.TILE,JobStatus.COMPLETE,JobStatus.RUNNING)
 
-def tile_image(source_id,db_id,url,zoom,datetime):
+def tile_image_and_store(source_id,db_id,url,zoom,datetime):
     
     reprojected = download_and_reproject(source_id, url)
 
@@ -93,7 +96,7 @@ def tile_image(source_id,db_id,url,zoom,datetime):
     tiles_created = tile_image(reprojected, zoom, db_id)
 
     for tile in tiles_created:
-        dbcontext.tile_insert(tile.x,tile.y,tile.z,datetime,source_id)
+        dbcontext.tile_insert(tile.x,tile.y,tile.z,datetime,db_id)
         dbcontext.add_job(JobType.DETECT,{"test":1})
 
 
@@ -102,7 +105,7 @@ Search for images that intersect the lat-lon bounds provided
 '''
 def queue_images_in_area(lat_min, lat_max, lon_min, lon_max):
     #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
-    zoom = 11
+    zoom = SENTINEL_ZOOM_TILE_LEVEL
     api_url = "https://earth-search.aws.element84.com/v1"
     client = Client.open(api_url)
     collection = (
@@ -135,7 +138,7 @@ def queue_images_in_area(lat_min, lat_max, lon_min, lon_max):
 
         source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
 
-        dbcontext.add_job(JobType.TILE,{"tile":source_id,"href":item.assets["visual"].href,"props":item.properties})
+        dbcontext.add_job(JobType.TILE,{"id":item.id,"source_db_id":source_id,"href":item.assets["visual"].href,"props":item.properties})
         
 
     
