@@ -2,6 +2,7 @@ import json
 import psycopg2
 from psycopg2 import Error
 
+from atlas.jobs import JobStatus
 from atlas.settings import Settings
 
 class AtlasDBFacade:
@@ -53,7 +54,7 @@ class AtlasDBFacade:
             cur.execute("CREATE TABLE IF NOT EXISTS sources(id SERIAL PRIMARY KEY, source VARCHAR(256), baseimageurl VARCHAR(1024), time TIMESTAMP);")
             cur.execute("CREATE TABLE IF NOT EXISTS tiles(id SERIAL PRIMARY KEY, sourceid SERIAL, tilex INT, tiley INT, tilez INT, time TIMESTAMP, CONSTRAINT fk_source FOREIGN KEY(sourceid) REFERENCES sources(id));")
             cur.execute("CREATE TABLE IF NOT EXISTS metrics(id SERIAL PRIMARY KEY, tileid SERIAL, tilex INT, tiley INT, tilez INT, time TIMESTAMP, metric VARCHAR(64), value FLOAT, CONSTRAINT fk_tile FOREIGN KEY(tileid) REFERENCES tiles(id));")
-            cur.execute("CREATE TABLE IF NOT EXISTS jobs(id SERIAL PRIMARY KEY, jobtype VARCHAR(64), jobparams JSON, status );")
+            cur.execute("CREATE TABLE IF NOT EXISTS jobs(id SERIAL PRIMARY KEY, jobtype VARCHAR(64), jobparams JSON, status VARCHAR(64));")
             #cur.execute("CREATE TABLE IF NOT EXISTS detections(id SERIAL PRIMARY KEY, tilex INT, tiley INT, tilez INT, time TIMESTAMP, name VARCHAR(64), location geography(POINT,4326));")
             cur.close()
             conn.commit()
@@ -83,7 +84,22 @@ class AtlasDBFacade:
 
     def add_job(self,job_type,job_params):
         params_str = json.dumps(job_params)
-        return self._db_fetchone(f"INSERT INTO jobs (jobtype, jobparams) VALUES (%s,%s) RETURNING id;",(str(job_type),params_str))
+        return self._db_fetchone(f"INSERT INTO jobs (jobtype, jobparams, status) VALUES (%s,%s,%s) RETURNING id;",(str(job_type),params_str,str(JobStatus.NOT_STARTED)))
+    
+    def peek_job(self,job_type):
+        return self._db_fetchone(f"SELECT * FROM jobs WHERE jobtype=%s AND status=%s",(str(job_type),str(JobStatus.NOT_STARTED)))
+    
+    def get_job(self,job_id):
+        return self._db_fetchone(f"SELECT * FROM jobs WHERE id=%s",(str(job_id)))
+
+    def update_job(self,job_id,job_type,job_status,previous_job_status):
+        return self._db_fetchone(f"UPDATE jobs SET status=%s WHERE id=%s AND jobtype=%s AND status=%s",(str(job_status),str(job_id),str(job_type),str(previous_job_status)))
+
+    def pop_job(self,job_id):
+        return self._db_execute(f"DELETE FROM jobs WHERE id=%s",(str(job_id)))
+
+    
+
 
 
     def _db_execute(self,query,params):

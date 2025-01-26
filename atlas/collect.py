@@ -1,3 +1,4 @@
+import json
 from pystac_client import Client
 import numpy as np
 import rasterio
@@ -13,7 +14,7 @@ from pygeotile.tile import Tile
 from pygeotile.point import Point as pyPoint
 from shapely.geometry import Point, Polygon
 
-from atlas.jobs import JobTypes
+from atlas.jobs import JobStatus, JobType
 from atlas.models.tile import Tile as TileData
 from atlas.db import AtlasDBFacade
 
@@ -49,7 +50,6 @@ def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
     )
 
     number_processed = 0 
-    # Just use the most recent item
     for item in [item for item in search.items() if item.properties["eo:cloud_cover"] < 20]:
 
         reprojected = download_and_reproject(item.id, item.assets["visual"].href)
@@ -63,12 +63,79 @@ def search_images(lat_min, lat_max, lon_min, lon_max, number_to_process):
         tiles_created = tile_image(reprojected, zoom, source_id)
 
         for tile in tiles_created:
-            dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
-            dbcontext.add_job(JobTypes.DETECT,{"test":1})
+            tile_id = dbcontext.tile_insert(tile.x,tile.y,tile.z,item.properties["datetime"],source_id)
+            dbcontext.add_job(JobType.DETECT,{"tile_id":tile_id})
 
         number_processed = number_processed + 1
 
         if number_processed >= number_to_process: return
+
+def check_jobs():
+    dbcontext = AtlasDBFacade()
+
+    dbcontext.connect()
+
+    job = dbcontext.peek_job(JobType.TILE)
+
+    if not job is None:
+        dbcontext.update_job(job,JobType.TILE,JobStatus.RUNNING,JobStatus.NOT_STARTED)
+        job_details = dbcontext.get_job(job)
+        tile_image()
+
+def tile_image(source_id,db_id,url,zoom,datetime):
+    
+    reprojected = download_and_reproject(source_id, url)
+
+    dbcontext = AtlasDBFacade()
+
+    dbcontext.connect()
+
+    tiles_created = tile_image(reprojected, zoom, db_id)
+
+    for tile in tiles_created:
+        dbcontext.tile_insert(tile.x,tile.y,tile.z,datetime,source_id)
+        dbcontext.add_job(JobType.DETECT,{"test":1})
+
+
+'''
+Search for images that intersect the lat-lon bounds provided
+'''
+def queue_images_in_area(lat_min, lat_max, lon_min, lon_max):
+    #Zoom 13 seems to be appropriate to get near-right-size tiles back when chopped up for sentinel.
+    zoom = 11
+    api_url = "https://earth-search.aws.element84.com/v1"
+    client = Client.open(api_url)
+    collection = (
+        "sentinel-2-l2a"  # Sentinel-2, Level 2A, Cloud Optimized GeoTiffs (COGs)
+    )
+    polygon = Polygon(
+        [
+            Point(lon_min, lat_min),
+            Point(lon_max, lat_min),
+            Point(lon_max, lat_max),
+            Point(lon_min, lat_max),
+        ]
+    )
+
+    search = client.search(
+        collections=[collection],
+        intersects=polygon,
+        max_items=1000,
+        sortby=[
+            {"direction": "desc", "field": "properties.datetime"},
+            {"direction": "asc", "field": "id"},
+        ],
+    )
+
+    for item in [item for item in search.items() if item.properties["eo:cloud_cover"] < 20]:
+
+        dbcontext = AtlasDBFacade()
+
+        dbcontext.connect()
+
+        source_id = dbcontext.source_insert(item.properties["datetime"],"sentinel-2-l2a",item.assets["visual"].href)
+
+        dbcontext.add_job(JobType.TILE,{"tile":source_id,"href":item.assets["visual"].href,"props":item.properties})
         
 
     
