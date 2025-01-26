@@ -29,8 +29,6 @@ Separate containers should be run, running the job engine to continually pick up
 async def check():
     check_jobs()
 
-
-
 @app.get("/analyse/{source_id}")
 async def analyse(source_id:int):
     detectInPath(source_id)
@@ -39,9 +37,6 @@ async def analyse(source_id:int):
 async def analyse(tile_x:int,tile_y:int,tile_z:int,metric:str):
     result = get_change_over_time(tile_x,tile_y,tile_z,metric)
     return result
-
-
-
 
 def start():
     """Launched with `poetry run start` at root level"""

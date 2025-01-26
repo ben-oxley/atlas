@@ -1,8 +1,10 @@
+from typing import Dict
 from PIL import Image
 from ultralytics import YOLO
 from pathlib import Path
 
 from atlas.db import AtlasDBFacade
+from atlas.models.tile import Tile, TileMetricTimeline
 
 
 '''
@@ -43,3 +45,15 @@ def get_change_over_time(tile_x:int,tile_y:int,tile_z:int,metric:str):
     dbcontext.connect()
 
     return dbcontext.get_metric(tile_x,tile_y,tile_z,metric)
+
+
+def get_distinct_times(tiles:Dict[Tile,TileMetricTimeline]):
+    times = set([
+        datapoint.time
+        for tile in tiles.values()
+        for datapoints in tile.values
+        for datapoint in datapoints
+    ])
+
+
+    
